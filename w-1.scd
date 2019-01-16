@@ -49,11 +49,11 @@ FIRST, LET'S ALL TRY TO CONNECT :)
 */
 
 
-~myname = "alo"; // <--- ASSIGN YOUR NAME TO A VARIABLE
+~myname = ""; // <--- ASSIGN YOUR NAME TO A VARIABLE
 
 ~myip = "ipconfig getifaddr en0".unixCmdGetStdOut // <-- FIND YOUR IP
 
-~send_to = "127.0.0.1"; // <--- SEND YOUR ADDRESS TO ME
+~send_to = "192.168.3.3"; // <--- SEND YOUR ADDRESS TO ME
 
 ~alo = NetAddr(~send_to, 57120)
 
