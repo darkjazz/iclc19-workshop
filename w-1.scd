@@ -54,13 +54,15 @@ password: iame0t0t0
 
 ~ips = ();
 
+
 OSCdef('chat', {arg message;
+	var ip;
 	Post << ">" << message[1] << ": " << message[2] << " " << Char.nl;
-	~ips[message[1]] = message[2]
+	ip = message[2].asString.drop("hello! my ip is ".size);
+	~ips[message[1]] = ip.keep(ip.size-1)
 }, "/chat")
 
 ~ips
-
 
 ~mycode = "~servers = ~ips.collect({arg ip;
 	Server(ip, NetAddr(ip, 57120))
@@ -72,15 +74,16 @@ OSCdef('chat', {arg message;
 	Server(value, NetAddr(value, 57110))
 })
 
+s.boot
 
 ~synthdef = SynthDef('sine', {arg freq, amp, dur;
 	var sig;
 	sig = SinOsc.ar(freq) * EnvGen.kr(Env.perc, 1, amp, timeScale: dur, doneAction: Done.freeSelf);
 	Out.ar(0, sig.dup)
-}).add.send(~servers['anna'])
+}).add.send(~servers['alo'])
 
 
-Synth('sine', ['freq', 601.rand, 'amp', 0.4, 'dur', 1.0])
+Synth('sine', ['freq', 601.rand, 'amp', 0.4, 'dur', 1.0], ~servers['alo'])
 
 
 ~servers.do({arg server;
@@ -92,14 +95,50 @@ Synth('sine', ['freq', 601.rand, 'amp', 0.4, 'dur', 1.0])
 })
 
 
-Document("send-me-code.scd")
 
-~codedoc = Document.allDocuments.select({arg doc; doc.name == "send-me-code.scd"}).first
 
+/*
+or if you have a window for your collaborators' code
+it can be automatically posted there, so the same bit of code can be modified collaboratively
+*/
+
+
+
+// open send-me-code.scd
+~codedoc = Document("send-me-code.scd")
+
+// ~codedoc = Document.allDocuments.select({arg doc; doc.name == "send-me-code.scd"}).first
+
+// activate a receiver that posts the code in the send-me-code.scd file
 OSCdef('code', {arg message;
+	message.postln;
 	~codedoc.string = " /*from " ++ message[1] ++ "*/ " ++ Char.nl.asString ++ message[2] ++ Char.nl.asString;
 	~codedoc.front;
 }, "/code")
+
+
+// to send code to others to edit, create a SynthDef
+~mycode = SynthDef('tone', {arg freq, amp, dur;
+	var sig;
+	sig = LFSaw.ar(freq, mul: amp) * Line.kr(1, 0, dur, doneAction: Done.freeSelf);
+	Out.ar(0, sig)
+}).asCompileString
+
+
+~alo = NetAddr("192.168.1.102", 57120)
+// and send it, including the type of message, your nickname, and the contents
+~client.sendMsg("/code", "alo", ~mycode)
+
+~cindy = NetAddr("192.168.1.116", 57120)
+
+~cindy.sendMsg("/code", "alo", ~mycode)
+
+~sd = NetAddr("192.168.1.108", 57120)
+~sd.sendMsg("/code", "alo", ~mycode)
+
+
+
+
 
 
 ~lang_addr = ~ips.collect({arg value;
@@ -113,9 +152,183 @@ OSCdef('code', {arg message;
 
 
 
+/*
+you can also make the code execute automatically in another client
+if you wrap it in a string and send it and hope that they trust you to
+receive it
+*/
 
-// MORE SYNTHESIS AND SEQUENCING
+Tdef('loop', {
+	100.do({
+		SynthDef('racket', {
+			Out.ar(0, PMOsc.ar(rrand(30, 60), rrand(100, 200), 10.rand)
+				* Line.kr(0.06.rand, 0, rrand(0.3, 1.0), doneAction: Done.freeSelf))
+		}).play;
+		rrand(0.2, 0.6).wait;
+	})
+}).play
 
+~mycode = "";
+
+~client.sendMsg("/run", ~mycode)
+
+
+// this is how you would receive it
+OSCdef('run', { arg message;
+	message[1].asString.compile.()
+}, '/run')
+
+
+
+
+
+
+
+
+
+
+
+
+// SEQUENCING WITH SCHEDULERS AND LOOPS
+
+x.send(~servers['mojojojo'])
+
+
+~freqs = Scale.minor.ratios * 301;
+Tdef('myloop', {
+	loop({
+		Synth('sine', ['freq', ~freqs.choose, 'amp', 0.2.rand, 'dur', 1 ]);
+		1.wait; // <---- VERY IMPORTANT!!!!
+	})
+}).play
+
+// you can change it while it runs
+
+Tdef('myloop', {
+	loop({
+		Synth('sine', ['freq', ~freqs.choose, 'amp', 0.2, 'dur', 0.4 ], ~servers.choose);
+		0.3.wait;
+	})
+}).play;
+
+// now clear it up so it doesn't run indefinitely
+Tdef('myloop').clear
+
+
+
+
+
+
+
+
+
+
+
+
+
+// SEQUENCING WITH PATTERNS
+
+// there is this magical object called Pbind...
+~bind = Pbind().play
+~bind.stop
+
+
+~seq = Pbind(
+	'server', Prand(~servers, inf),
+	'instrument', 'sine',
+	'freq', Pseq(Scale.minor.ratios * 201, inf),
+	'amp', Pwhite(0.4, 0.8),
+	'dur', Pseq([1, 2, 3, 4], inf),
+	'delta', 0.5
+).play
+
+~seq.stop
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+SynthDef('slide', {arg freq, amp, dur;
+	var sig;
+	sig = SinOsc.ar(XLine.kr(freq, freq*2, dur)) * EnvGen.kr(Env.perc, 1, amp, timeScale: dur, doneAction: Done.freeSelf);
+	Out.ar(0, sig.dup)
+}).add
+
+.send(~server)
+
+
+// you can also sequence Pbinds
+~seq = Pseq([
+	Pbind(
+		'server', Prand([s, ~servers['anna']], inf),
+		'instrument', 'sine',
+		'freq', Pseq(Scale.minor.ratios * 201, 2),
+		'amp', Pwhite(0.4, 0.8),
+		'dur', Prand([1, 2, 3, 4], inf),
+		'delta', 0.5
+	),
+	Pbind(
+		'server', Pstutter(2, Pseq([s, ~servers['anna']], 2)),
+		'instrument', Pseq(['sine', 'slide'], 8),
+		'freq', Pseq(Scale.minor.ratios.reverse * 401, 2),
+		'amp', 0.5,
+		'dur', 0.7,
+		'delta', 0.25
+	)
+], inf).play
+
+
+~seq.stop
+
+
+
+
+
+
+
+
+
+
+
+// you can play Pbinds in parallel
+~seq = Ppar([
+	Pbind(
+		// 'server', Prand([s, ~server], inf),
+		'instrument', 'sine',
+		'freq', Pseq(Scale.minor.ratios * 201, 2),
+		'amp', Pwhite(0.4, 0.8),
+		'dur', Prand([1, 2, 3, 4], inf),
+		'delta', 0.5
+	),
+	Pbind(
+		// 'server', Pstutter(2, Pseq([s, ~server], 2)),
+		'instrument', Pseq(['sine', 'slide'], 8),
+		'freq', Pseq(Scale.minor.ratios.reverse * 401, 2),
+		'amp', 0.5,
+		'dur', 0.7,
+		'delta', 0.25
+	)
+], inf).play
+
+~seq.stop
+
+
+
+
+
+
+
+
+// MORE SYNTHESIS
 
 { LFSaw.ar(440) }.plot
 
