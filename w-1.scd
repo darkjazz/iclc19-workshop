@@ -46,7 +46,7 @@ FIRST, LET'S ALL TRY TO CONNECT :)
 */
 
 
-~myname = ""; // <--- ASSIGN YOUR NAME TO A VARIABLE
+~myname = "alo"; // <--- ASSIGN YOUR NAME TO A VARIABLE
 
 ~myip = "ipconfig getifaddr en0".unixCmdGetStdOut // <-- FIND YOUR IP
 
@@ -58,28 +58,20 @@ FIRST, LET'S ALL TRY TO CONNECT :)
 
 
 
-
-
 ~ips = ()
 
-~ips['alo'] = ~send_to
+~ips['hernani'] = "192.168.3.40"
 
 
 (
 OSCdef('chat', {arg message;
-	var ip;
 	Post << ">" << message[1] << ": " << message[2] << " " << Char.nl;
-	ip =
-	~ips[message[1]] = message[2].asString.drop("hello! my ip is ".size);
 }, "/chat")
 )
-~ips
 
 
 
-
-
-
+~ips.keysValuesDo({|key, val| key.postln})
 
 
 
@@ -106,7 +98,12 @@ OSCdef('code', {arg message;
 )
 
 
-~mycode = ~ips.asString
+~mycode = ~ips.collect({|ip| ip.quote }).asString
+
+
+
+
+
 
 
 
@@ -122,7 +119,7 @@ OSCdef('code', {arg message;
 })
 
 
-
+~lang_addr['anna'].sendMsg("/code", ~mycode)
 
 
 
@@ -141,16 +138,25 @@ OSCdef('code', {arg message;
 	Server(value, NetAddr(value, 57110))
 })
 
+
+
+
+
 s.boot
 
+
+
+
+
+(
 ~synthdef = SynthDef('sine', {arg freq, amp, dur;
 	var sig;
 	sig = SinOsc.ar(freq) * EnvGen.kr(Env.perc, 1, amp, timeScale: dur, doneAction: Done.freeSelf);
 	Out.ar(0, sig.dup)
-}).add.send(~servers['alo'])
+}).add.send(~servers['hernani'])
 
-
-Synth('sine', ['freq', 601.rand, 'amp', 0.4, 'dur', 1.0], ~servers['alo'])
+)
+Synth('sine', ['freq', 601.rand, 'amp', 0.4, 'dur', 1.0], ~servers.choose)
 
 
 ~servers.do({arg server;
@@ -165,12 +171,27 @@ Synth('sine', ['freq', 601.rand, 'amp', 0.4, 'dur', 1.0], ~servers['alo'])
 
 
 
+
+
+
+
+
+
+
+
+
+
 // to send code to others to edit, create a SynthDef
 ~mycode = SynthDef('tone', {arg freq, amp, dur;
 	var sig;
 	sig = LFSaw.ar(freq, mul: amp) * Line.kr(1, 0, dur, doneAction: Done.freeSelf);
 	Out.ar(0, sig)
 }).asCompileString
+
+
+
+
+
 
 
 ~alo = NetAddr("192.168.1.102", 57120)
@@ -187,13 +208,18 @@ Synth('sine', ['freq', 601.rand, 'amp', 0.4, 'dur', 1.0], ~servers['alo'])
 
 
 
+
+
+
 /*
 you can also make the code execute automatically in another client
 if you wrap it in a string and send it and hope that they trust you to
 receive it
 */
 
-Tdef('loop', {
+Tdef('loop').clear
+
+~mycode = "Tdef('loop', {
 	100.do({
 		SynthDef('racket', {
 			Out.ar(0, PMOsc.ar(rrand(30, 60), rrand(100, 200), 10.rand)
@@ -201,11 +227,11 @@ Tdef('loop', {
 		}).play;
 		rrand(0.2, 0.6).wait;
 	})
-}).play
+}).play"
 
 ~mycode = "";
 
-~client.sendMsg("/run", ~mycode)
+~lang_addr['sam'].sendMsg("/run", ~mycode)
 
 
 // this is how you would receive it
@@ -226,13 +252,12 @@ OSCdef('run', { arg message;
 
 // SEQUENCING WITH SCHEDULERS AND LOOPS
 
-x.send(~servers[''])
 
 
 ~freqs = Scale.minor.ratios * 301;
 Tdef('myloop', {
 	loop({
-		Synth('sine', ['freq', ~freqs.choose, 'amp', 0.7.rand, 'dur', 1 ]);
+		Synth('sine', ['freq', ~freqs.choose, 'amp', rrand(0.4, 0.8), 'dur', 1 ], ~servers.choose);
 		1.wait; // <---- VERY IMPORTANT!!!!
 	})
 }).play
@@ -268,14 +293,16 @@ Tdef('myloop').clear
 ~bind.stop
 
 
-~seq = Pbind(
-	'server', Prand(~servers, inf),
+~seq = Pdef('loop',
+
+Pbind(
+	'server', Prand(~servers.values.asArray, inf),
 	'instrument', 'sine',
-	'freq', Pseq(Scale.minor.ratios * 201, inf),
-	'amp', Pwhite(0.4, 0.8),
+	'freq', Pseq(Scale.minor.ratios * 5001, inf),
+	'amp', Pwhite(0.2, 0.4),
 	'dur', Pseq([1, 2, 3, 4], inf),
 	'delta', 0.5
-).play
+)).play
 
 ~seq.stop
 
@@ -298,21 +325,21 @@ SynthDef('slide', {arg freq, amp, dur;
 	Out.ar(0, sig.dup)
 }).add
 
-.send(~server)
+.send(~servers)
 
 
 // you can also sequence Pbinds
 ~seq = Pseq([
 	Pbind(
-		'server', Prand([s, ~servers['anna']], inf),
+		'server', Prand([s, ~servers.choose], inf),
 		'instrument', 'sine',
 		'freq', Pseq(Scale.minor.ratios * 201, 2),
-		'amp', Pwhite(0.4, 0.8),
+		'amp', Pwhite(0.2, 0.5),
 		'dur', Prand([1, 2, 3, 4], inf),
 		'delta', 0.5
 	),
 	Pbind(
-		'server', Pstutter(2, Pseq([s, ~servers['anna']], 2)),
+		'server', Pstutter(2, Pseq([s, ~servers.choose], 2)),
 		'instrument', Pseq(['sine', 'slide'], 8),
 		'freq', Pseq(Scale.minor.ratios.reverse * 401, 2),
 		'amp', 0.5,
@@ -337,17 +364,19 @@ SynthDef('slide', {arg freq, amp, dur;
 // you can play Pbinds in parallel
 ~seq = Ppar([
 	Pbind(
-		// 'server', Prand([s, ~server], inf),
+		// 'server', Prand(~servers, 4),
+		'server', s,
 		'instrument', 'sine',
-		'freq', Pseq(Scale.minor.ratios * 201, 2),
+		'freq', Pseq(Scale.minor.ratios * 4001, 2),
 		'amp', Pwhite(0.4, 0.8),
 		'dur', Prand([1, 2, 3, 4], inf),
 		'delta', 0.5
 	),
 	Pbind(
-		// 'server', Pstutter(2, Pseq([s, ~server], 2)),
-		'instrument', Pseq(['sine', 'slide'], 8),
-		'freq', Pseq(Scale.minor.ratios.reverse * 401, 2),
+		// 'server', Pseq(~servers, 2),
+		'server', s,
+		'instrument', Pseq(['sine', 'slide'], inf),
+		'freq', Pseq(Scale.minor.ratios.reverse * 5001, inf),
 		'amp', 0.5,
 		'dur', 0.7,
 		'delta', 0.25
