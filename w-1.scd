@@ -44,13 +44,27 @@ connect to eototo
 password: iame0t0t0
 "
 
-~myname = "alo";
+/*
+FIRST, LET'S ALL TRY TO CONNECT :)
+*/
 
-~myip = "ipconfig getifaddr en0".unixCmdGetStdOut
 
-~client = NetAddr(~myip, 57120)
+~myname = "alo"; // <--- ASSIGN YOUR NAME TO A VARIABLE
 
-~client.sendMsg("/chat", ~myname, "hello! my ip is %".format(~myip))
+~myip = "ipconfig getifaddr en0".unixCmdGetStdOut // <-- FIND YOUR IP
+
+~send_to = "127.0.0.1"; // <--- SEND YOUR ADDRESS TO ME
+
+~alo = NetAddr(~send_to, 57120)
+
+~alo.sendMsg("/chat", ~myname, "hello! my ip is %".format(~myip))
+
+
+
+
+
+
+
 
 ~ips = ();
 
@@ -63,6 +77,62 @@ OSCdef('chat', {arg message;
 }, "/chat")
 
 ~ips
+
+
+
+
+
+
+
+
+
+
+/*
+NOW I WOULD LIKE TO SEND YOU EVERYONE'S ADDRESSES
+*/
+
+
+
+// open send-me-code.scd
+~codedoc = Document("send-me-code.scd")
+
+// ~codedoc = Document.allDocuments.select({arg doc; doc.name == "send-me-code.scd"}).first
+
+// activate a receiver that posts the code in the send-me-code.scd file
+(
+OSCdef('code', {arg message;
+	message.postln;
+	~codedoc.string = " /*from " ++ message[1] ++ "*/ " ++ Char.nl.asString ++ message[2] ++ Char.nl.asString;
+	~codedoc.front;
+}, "/code")
+
+)
+
+
+~mycode = ~ips.asString
+
+
+
+// MAKE A DICTIONARY OF ALL CLIENT ADDRESSES
+~lang_addr = ~ips.collect({arg value;
+	NetAddr(value, 57120)
+})
+
+
+// SEND ADDRESSES TO EVERYONE
+~lang_addr.do({arg addr;
+	addr.sendMsg("/code", "alo", ~mycode)
+})
+
+
+
+
+
+
+
+
+
+
 
 ~mycode = "~servers = ~ips.collect({arg ip;
 	Server(ip, NetAddr(ip, 57120))
@@ -97,25 +167,6 @@ Synth('sine', ['freq', 601.rand, 'amp', 0.4, 'dur', 1.0], ~servers['alo'])
 
 
 
-/*
-or if you have a window for your collaborators' code
-it can be automatically posted there, so the same bit of code can be modified collaboratively
-*/
-
-
-
-// open send-me-code.scd
-~codedoc = Document("send-me-code.scd")
-
-// ~codedoc = Document.allDocuments.select({arg doc; doc.name == "send-me-code.scd"}).first
-
-// activate a receiver that posts the code in the send-me-code.scd file
-OSCdef('code', {arg message;
-	message.postln;
-	~codedoc.string = " /*from " ++ message[1] ++ "*/ " ++ Char.nl.asString ++ message[2] ++ Char.nl.asString;
-	~codedoc.front;
-}, "/code")
-
 
 // to send code to others to edit, create a SynthDef
 ~mycode = SynthDef('tone', {arg freq, amp, dur;
@@ -129,10 +180,6 @@ OSCdef('code', {arg message;
 // and send it, including the type of message, your nickname, and the contents
 ~client.sendMsg("/code", "alo", ~mycode)
 
-~cindy = NetAddr("192.168.1.116", 57120)
-
-~cindy.sendMsg("/code", "alo", ~mycode)
-
 ~sd = NetAddr("192.168.1.108", 57120)
 ~sd.sendMsg("/code", "alo", ~mycode)
 
@@ -141,13 +188,6 @@ OSCdef('code', {arg message;
 
 
 
-~lang_addr = ~ips.collect({arg value;
-	NetAddr(value, 57120)
-})
-
-~lang_addr.do({arg addr;
-	addr.sendMsg("/code", "alo", ~mycode)
-})
 
 
 
