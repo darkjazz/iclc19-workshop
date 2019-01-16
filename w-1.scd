@@ -39,9 +39,6 @@ http://doc.sccode.org/Guides/UsingExtensions.html
 debugging tips:
 http://danielnouri.org/docs/SuperColliderHelp/Language/Debugging-tips.html
 
-
-connect to eototo
-password: iame0t0t0
 "
 
 /*
