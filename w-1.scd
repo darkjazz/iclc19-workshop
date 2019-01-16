@@ -6,7 +6,7 @@
 INTRODUCTION
 ----------------------------------------------------------
 
-The files are available at: http://tehis.net/iclc2019/
+The files are available at: https://goo.gl/wV4QJ4
 
 
 
@@ -63,19 +63,19 @@ FIRST, LET'S ALL TRY TO CONNECT :)
 
 
 
+~ips = ()
+
+~ips['alo'] = ~send_to
 
 
-
-~ips = ();
-
-
+(
 OSCdef('chat', {arg message;
 	var ip;
 	Post << ">" << message[1] << ": " << message[2] << " " << Char.nl;
-	ip = message[2].asString.drop("hello! my ip is ".size);
-	~ips[message[1]] = ip.keep(ip.size-1)
+	ip =
+	~ips[message[1]] = message[2].asString.drop("hello! my ip is ".size);
 }, "/chat")
-
+)
 ~ips
 
 
@@ -190,8 +190,6 @@ Synth('sine', ['freq', 601.rand, 'amp', 0.4, 'dur', 1.0], ~servers['alo'])
 
 
 
-
-
 /*
 you can also make the code execute automatically in another client
 if you wrap it in a string and send it and hope that they trust you to
@@ -231,13 +229,13 @@ OSCdef('run', { arg message;
 
 // SEQUENCING WITH SCHEDULERS AND LOOPS
 
-x.send(~servers['mojojojo'])
+x.send(~servers[''])
 
 
 ~freqs = Scale.minor.ratios * 301;
 Tdef('myloop', {
 	loop({
-		Synth('sine', ['freq', ~freqs.choose, 'amp', 0.2.rand, 'dur', 1 ]);
+		Synth('sine', ['freq', ~freqs.choose, 'amp', 0.7.rand, 'dur', 1 ]);
 		1.wait; // <---- VERY IMPORTANT!!!!
 	})
 }).play
@@ -399,7 +397,7 @@ s.sendMsg("/n_free", 1011)
 
 
 
-
+s.boot
 
 Env.sine.plot
 
@@ -416,7 +414,8 @@ SynthDef('mod', {arg freq, rate, amp, pan, dur;
 Env.perc.plot
 
 
-~synth = Synth('mod', ['freq', 40, 'rate', 1, 'amp', 0.2, 'pan', 1])
+
+~synth = Synth('mod', ['freq', 40, 'rate', 1, 'amp', 1.0, 'pan', 1])
 
 ~synth.set('freq', 400, 'rate', 10)
 ~synth.free
